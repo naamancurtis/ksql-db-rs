@@ -1,4 +1,14 @@
-# Rust KSQL-DB
+<div align="center">
+  <h1>Rust KSQL DB</h1>
+
+  <div>
+[![crates.io](https://img.shields.io/crates/v/ksqldb?label=latest)](https://crates.io/crates/ksqldb)
+[![docs](https://docs.rs/ksqldb/badge.svg)](https://docs.rs/ksqldb/latest/ksqldb/)
+[![repo](https://img.shields.io/badge/github-code-black)](https://github.com/naamancurtis/ksql-db-rs)
+[![Apache-2.0](https://img.shields.io/github/license/naamancurtis/ksql-db-rs)](https://github.com/naamancurtis/ksql-db-rs/blob/main/LICENSE)
+  </div>
+
+</div>
 
 This crate is a thin wrapper around the [KSQL-DB](https://ksqldb.io/) REST API
 to make interacting with the API more ergonomic for Rust projects. Under the
