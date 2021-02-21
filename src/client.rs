@@ -364,7 +364,7 @@ impl KsqlDB {
         todo!()
     }
 
-    /// This is the lower level entry point to the `/ksql` endpoint.
+    /// This is a lower level entry point to the `/ksql` endpoint.
     ///
     /// This resource runs a sequence of 1 or more `SQL` statements. All statements, except those starting with `SELECT` can be run.
     ///
@@ -374,8 +374,7 @@ impl KsqlDB {
     /// of statements you're executing. It requires that you pass a type `T` to the function dicatating
     /// what you want to deserialize from the response. In the event that you're sending multiple
     /// requests which all contain different response structures it might be easier to
-    /// specifiy the value as a [`serde_json::Value`] and handle the parsing on your application
-    /// side.
+    /// specifiy the value as a [`serde_json::Value`] and handle the parsing in your application.
     ///
     /// ## Examples
     ///
@@ -463,14 +462,11 @@ impl KsqlDB {
         Ok(result)
     }
 
-    /// Ideally you shouldn't be using this function as it just returns the raw JSON
-    /// and doesn't do any error handling or response parsing, however this can be
-    /// useful for when you're debugging response/error types so it will be left
-    /// in for now.
+    /// This method just makes the request to the execute statement endpoint and returns
+    /// the raw `JSON` response back to you, not doing any parsing or error checking.
     ///
-    /// The only other usecase for this function would be when you are performing different
-    /// SQL statements (with different response bodies) all within the same query, as we
-    /// aren't able to deserialize into multiple types within the same array.
+    /// It's unlikely that you would want to use this in any of your application code, however it
+    /// might be useful for development or debugging, which is why it will be left in.
     ///
     /// The caveat to this is that by using this function the caller has to do all parsing
     /// (`Ok` or `Err`) themselves.

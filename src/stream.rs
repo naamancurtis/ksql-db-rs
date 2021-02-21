@@ -48,11 +48,16 @@ mod http2 {
         }
 
         /// This method lets you stream the output records of a `SELECT` statement
-        /// via HTTP 2 streams. The response is streamed back until the
+        /// via HTTP/2 streams. The response is streamed back until the
         /// `LIMIT` specified in the statement is reached, or the client closes the connection.
         ///
         /// If no `LIMIT` is specified in the statement, then the response is streamed until the client closes the connection.
         ///
+        /// This method requires the `http2` feature be enabled.
+        ///
+        /// This crate also offers a HTTP/1 compatible approach to streaming results via
+        /// `Transfer-Encoding: chunked`. To enable this turn off default features and enable the
+        /// `http1` feature.
         ///
         /// ## Notes
         ///
@@ -274,6 +279,10 @@ mod http1 {
         ///
         /// If no `LIMIT` is specified in the statement, then the response is streamed until the client closes the connection.
         ///
+        /// This method requires the `http1` feature is enabled.
+        ///
+        /// This crate also offers a HTTP/2 compatible approach to streaming results. To enable this
+        /// ensure the `http2` feature is being used.
         ///
         /// ## Notes
         ///
