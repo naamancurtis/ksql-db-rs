@@ -1,13 +1,13 @@
 [package]
 name = "ksqldb"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 authors = ["Naaman <naaman.the.dev@gmail.com>"]
 description = "A thin wrapper around the KSQL DB REST API to make it more ergonomic to work with."
 edition = "2018"
 readme = "readme.md"
 license = "Apache-2.0"
 repository = "https://github.com/naamancurtis/ksql-db-rs"
-categores = ["api-bindings", "asynchronous", "database"]
+categories = ["api-bindings", "asynchronous", "database"]
 include = [
     "**/*.rs",
     "Cargo.toml",

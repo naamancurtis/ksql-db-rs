@@ -38,6 +38,7 @@
 //! ```
 mod client;
 mod error;
+pub(crate) mod stream;
 pub mod types;
 
 pub use client::KsqlDB;

@@ -1,7 +1,7 @@
-#[cfg(any(feature = "http2", feature = "transfer_encoding"))]
+#[cfg(any(feature = "http2", feature = "http1"))]
 use futures_core::Stream;
 use reqwest::header::ACCEPT;
-use reqwest::{Client, ClientBuilder};
+use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde_json::json;
 
@@ -13,21 +13,14 @@ use super::types::{
 };
 use super::{Error, Result};
 
-#[cfg(feature = "http2")]
-pub use http2::*;
-
-#[cfg(not(feature = "http2"))]
-#[cfg(feature = "http1")]
-pub use http1::*;
-
 /// A KSQL-DB Client, ready to make requests to the server
 pub struct KsqlDB {
-    client: Client,
-    root_url: String,
-    https_only: bool,
+    pub(crate) client: Client,
+    pub(crate) root_url: String,
+    pub(crate) https_only: bool,
 }
 
-const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+pub(crate) const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 // High level API
 impl KsqlDB {
@@ -161,14 +154,14 @@ impl KsqlDB {
     /// }
     /// # }
     /// ```
-    #[cfg(any(feature = "http2", feature = "transfer_encoding"))]
+    #[cfg(any(feature = "http2", feature = "http1"))]
     pub async fn select<T>(
         &self,
         query: &str,
         stream_properties: HashMap<String, String>,
     ) -> Result<impl Stream<Item = Result<T>>>
     where
-        T: DeserializeOwned,
+        T: DeserializeOwned + Unpin,
     {
         self.query::<T>(query, stream_properties).await
     }
@@ -509,399 +502,11 @@ impl KsqlDB {
 }
 
 impl KsqlDB {
-    fn url_prefix(&self) -> &str {
+    pub(crate) fn url_prefix(&self) -> &str {
         if self.https_only {
             "https://"
         } else {
             "http://"
         }
-    }
-}
-
-#[cfg(feature = "http2")]
-mod http2 {
-    use bytes::Bytes;
-    use pin_project_lite::pin_project;
-    use reqwest::header::CONTENT_TYPE;
-    use serde_json::Value;
-    use std::marker::PhantomData;
-    use std::pin::Pin;
-    use std::task::{Context, Poll};
-
-    use super::*;
-
-    impl KsqlDB {
-        /// Initialises the KSQL DB Client with the provided `request::ClientBuilder`.
-        ///
-        /// Any authentication or common headers should be attached to the client prior to
-        /// calling this method.
-        pub fn new(url: String, mut builder: ClientBuilder, https_only: bool) -> Result<Self> {
-            builder = builder
-                .user_agent(USER_AGENT)
-                .http2_prior_knowledge()
-                .https_only(https_only);
-
-            Ok(Self {
-                client: builder.build()?,
-                root_url: url,
-                https_only,
-            })
-        }
-
-        /// @TODO
-        pub async fn query<T>(
-            &self,
-            statement: &str,
-            properties: HashMap<String, String>,
-        ) -> Result<impl Stream<Item = Result<T>>>
-        where
-            T: DeserializeOwned,
-        {
-            let url = format!("{}{}/query-stream", self.url_prefix(), self.root_url);
-            let payload = json!({
-                "sql": statement,
-                "properties": properties
-            });
-            let response = self
-                .client
-                .post(&url)
-                .header(CONTENT_TYPE, "application/vnd.ksqlapi.delimited.v1")
-                .json(&payload)
-                .send()
-                .await?
-                .bytes_stream();
-            let stream: QueryStream<T, _> = QueryStream::new(response);
-            Ok(stream)
-        }
-    }
-
-    pin_project! {
-        #[derive(Default)]
-        struct QueryStream<T, S> where S: Stream, T: DeserializeOwned {
-            columns: Vec<String>,
-            #[pin]
-            stream: S,
-            has_closed: bool,
-            _marker: PhantomData<T>
-        }
-    }
-
-    impl<T, S> QueryStream<T, S>
-    where
-        T: DeserializeOwned,
-        S: Stream<Item = std::result::Result<Bytes, reqwest::Error>>,
-    {
-        pub fn new(stream: S) -> Self {
-            Self {
-                columns: Default::default(),
-                stream,
-                has_closed: false,
-                _marker: PhantomData::default(),
-            }
-        }
-    }
-
-    impl<T, S> Stream for QueryStream<T, S>
-    where
-        T: DeserializeOwned,
-        S: Stream<Item = std::result::Result<Bytes, reqwest::Error>>,
-    {
-        type Item = Result<T>;
-
-        fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-            let mut this = self.project();
-            loop {
-                if *this.has_closed {
-                    return Poll::Ready(None);
-                }
-                match Pin::new(&mut this.stream).poll_next(cx) {
-                    Poll::Ready(Some(data)) => {
-                        let data = data?;
-
-                        // This should be the `header` for the events
-                        // This will contain the column information
-                        if this.columns.is_empty() {
-                            let mut json = serde_json::from_slice::<Value>(&data)?;
-                            if let Some(error_code) = json.get("error_code") {
-                                *this.has_closed = true;
-                                if let Some(error) = json.get("message") {
-                                    return Poll::Ready(Some(Err(Error::KSQLStream(format!(
-                                        "Error code: {}, message: {}",
-                                        error_code, error
-                                    )))));
-                                }
-                            }
-                            let schema = json["columnNames"].take();
-                            let columns: Vec<String> =
-                                serde_json::from_value::<Vec<String>>(schema)?
-                                    .into_iter()
-                                    .map(|c| c.to_lowercase())
-                                    .collect();
-                            *this.columns = columns;
-                            continue;
-                        }
-
-                        let json = serde_json::from_slice::<Value>(&*data)?;
-                        if json.get("error_code").is_some() {
-                            *this.has_closed = true;
-                            if let Some(error) = json.get("message") {
-                                return Poll::Ready(Some(Err(Error::KSQLStream(
-                                    error.to_string(),
-                                ))));
-                            }
-                        }
-                        let arr = json
-                            .as_array()
-                            .ok_or_else(|| {
-                                Error::KSQLStream("Expected an array of column data".to_string())
-                            })?
-                            .to_owned();
-                        let resp = this.columns.iter().zip(arr.into_iter()).fold(
-                            json!({}),
-                            |mut acc, (k, v)| {
-                                acc[k] = v;
-                                acc
-                            },
-                        );
-                        let resp = serde_json::from_value::<T>(resp)?;
-                        return Poll::Ready(Some(Ok::<_, Error>(resp)));
-                    }
-                    Poll::Ready(None) => return Poll::Ready(None),
-                    Poll::Pending => {}
-                }
-            }
-        }
-    }
-}
-
-#[cfg(feature = "http1")]
-mod http1 {
-    use bytes::Bytes;
-    use futures_core::Stream;
-    use lazy_static::lazy_static;
-    use pin_project_lite::pin_project;
-    use regex::Regex;
-    use serde::Deserialize;
-    use serde_json::Value;
-
-    use std::marker::PhantomData;
-    use std::pin::Pin;
-    use std::task::{Context, Poll};
-
-    use super::*;
-
-    lazy_static! {
-        static ref COLUMN_REGEX: Regex =
-            Regex::new(r#"`(?P<column>[a-zA-Z0-9_]+)`\w?"#).expect("failed to create column regex");
-    }
-    const NEW_LINE_DELIM: [u8; 1] = *b"\n";
-    const NEW_LINE_COMMA_DELIM: [u8; 2] = *b",\n";
-
-    impl KsqlDB {
-        /// Initialises the KSQL DB Client with the provided `request::ClientBuilder`.
-        ///
-        /// Any authentication or common headers should be attached to the client prior to
-        /// calling this method.
-        pub fn new(url: String, mut builder: ClientBuilder, https_only: bool) -> Result<Self> {
-            builder = builder.user_agent(USER_AGENT).https_only(https_only);
-
-            Ok(Self {
-                client: builder.build()?,
-                root_url: url,
-                https_only,
-            })
-        }
-        /// This resource lets you stream the output records of a `SELECT` statement
-        /// via a chunked transfer encoding. The response is streamed back until the
-        /// `LIMIT` specified in the statement is reached, or the client closes the connection.
-        ///
-        /// If no `LIMIT` is specified in the statement, then the response is streamed until the client closes the connection.
-        ///
-        ///
-        /// ## Notes
-        ///
-        /// - Given the columns specified in the clause, the selected columns **MUST** be Deserializeable
-        /// directly into the struct you provide when invoking this method. _(eg. If your SELECT query
-        /// excludes a non optional struct field, the Deserialization **will fail**.)_
-        /// - In the example below, if you were to change the query to be `SELECT ID FROM
-        /// EVENT_REPLAY_STREAM EMIT CHANGES`, the query would error, because all of the other fields
-        /// within the struct are mandatory fields.
-        ///
-        /// ## Example
-        ///
-        /// ```no_run
-        /// use futures_util::StreamExt;
-        /// use reqwest::Client;
-        /// use serde::Deserialize;
-        ///
-        /// use common::ksqldb::KsqlDB;
-        ///
-        /// #[derive(Debug, Deserialize)]
-        /// struct Response {
-        ///     id: String,
-        ///     is_keyframe: bool,
-        ///     sequence_number: u32,
-        ///     events_since_keyframe: u32,
-        ///     event_data: String,
-        /// }
-        ///
-        /// #[tokio::main]
-        /// async fn main() {
-        ///     let client = Client::new();
-        ///     let ksql = KsqlDB::new(client, "localhost:8088".to_string());
-        ///     let query = "SELECT * FROM EVENT_REPLAY_STREAM EMIT CHANGES;";
-        ///
-        ///     let mut stream = ksql
-        ///         .query::<Response>(&query, Default::default())
-        ///         .await
-        ///         .unwrap();
-        ///     while let Some(r) = stream.next().await {
-        ///         match r {
-        ///             Ok(data) => {
-        ///                 println!("{:#?}", data);
-        ///             }
-        ///             Err(e) => {
-        ///                 eprintln!("Found Error {}", e);
-        ///             }
-        ///         }
-        ///     }
-        /// }
-        /// ```
-        ///
-        /// [API Docs](https://docs.ksqldb.io/en/0.13.0-ksqldb/developer-guide/ksqldb-rest-api/query-endpoint/)
-        pub async fn query<T>(
-            &self,
-            query: &str,
-            stream_properties: HashMap<String, String>,
-        ) -> Result<impl Stream<Item = Result<T>>>
-        where
-            T: DeserializeOwned,
-        {
-            let url = format!("{}{}/query", self.url_prefix(), self.root_url);
-            let payload = json!({
-                "ksql": query,
-                "streamProperties": stream_properties
-            });
-
-            let stream = self
-                .client
-                .post(&url)
-                .json(&payload)
-                .send()
-                .await?
-                .bytes_stream();
-            let stream: TransferEncodedStream<T, _> = TransferEncodedStream::new(stream);
-            Ok(stream)
-        }
-    }
-
-    pin_project! {
-        #[derive(Default)]
-        struct TransferEncodedStream<T, S> where S: Stream, T: DeserializeOwned {
-            columns: Vec<String>,
-            #[pin]
-            stream: S,
-            has_closed: bool,
-            _marker: PhantomData<T>
-        }
-    }
-
-    impl<T, S> TransferEncodedStream<T, S>
-    where
-        T: DeserializeOwned,
-        S: Stream<Item = std::result::Result<Bytes, reqwest::Error>>,
-    {
-        pub fn new(stream: S) -> Self {
-            Self {
-                columns: Default::default(),
-                stream,
-                has_closed: false,
-                _marker: PhantomData::default(),
-            }
-        }
-    }
-
-    impl<T, S> Stream for TransferEncodedStream<T, S>
-    where
-        T: DeserializeOwned,
-        S: Stream<Item = std::result::Result<Bytes, reqwest::Error>>,
-    {
-        type Item = Result<T>;
-
-        fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-            let mut this = self.project();
-            loop {
-                if *this.has_closed {
-                    return Poll::Ready(None);
-                }
-                match Pin::new(&mut this.stream).poll_next(cx) {
-                    Poll::Ready(Some(data)) => {
-                        let data = data?;
-
-                        // This should be the `header` for the events
-                        // This will contain the column information
-                        if this.columns.is_empty() {
-                            let mut json = serde_json::from_slice::<Value>(&data[1..])?;
-                            let schema = json["header"]["schema"].take();
-                            let schema_str = serde_json::to_string(&schema)?;
-                            let captures = COLUMN_REGEX.captures_iter(&schema_str);
-                            let columns = captures
-                                .into_iter()
-                                .map(|c| c["column"].to_lowercase())
-                                .collect::<Vec<String>>();
-                            *this.columns = columns;
-                            continue;
-                        }
-
-                        // The chunked encoding has this horrible `,\n` syntax, so we'll skip
-                        // these
-                        if *data == NEW_LINE_DELIM || *data == NEW_LINE_COMMA_DELIM {
-                            continue;
-                        }
-
-                        let json = serde_json::from_slice::<QueryResponse>(&*data)?;
-
-                        // Check to see if the stream is about to close
-                        if let Some(error) = json.error_message {
-                            *this.has_closed = true;
-                            return Poll::Ready(Some(Err(Error::KSQLStream(error))));
-                        }
-                        if let Some(message) = json.final_message {
-                            *this.has_closed = true;
-                            return Poll::Ready(Some(Err(Error::FinalMessage(message))));
-                        }
-
-                        // Actually process the raw data
-                        if let Some(data) = json.row {
-                            let columns = data.columns;
-                            let resp = this.columns.iter().zip(columns.into_iter()).fold(
-                                json!({}),
-                                |mut acc, (k, v)| {
-                                    acc[k] = v;
-                                    acc
-                                },
-                            );
-                            let resp = serde_json::from_value::<T>(resp)?;
-                            return Poll::Ready(Some(Ok::<_, Error>(resp)));
-                        }
-                    }
-                    Poll::Ready(None) => return Poll::Ready(None),
-                    Poll::Pending => {}
-                }
-            }
-        }
-    }
-
-    #[derive(Deserialize)]
-    #[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
-    pub(crate) struct QueryResponse {
-        pub(crate) row: Option<Column>,
-        pub(crate) error_message: Option<String>,
-        pub(crate) final_message: Option<String>,
-    }
-
-    #[derive(Deserialize)]
-    pub(crate) struct Column {
-        pub(crate) columns: Vec<Value>,
     }
 }
