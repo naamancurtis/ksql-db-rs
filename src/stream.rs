@@ -109,7 +109,7 @@ mod http2 {
             properties: HashMap<String, String>,
         ) -> Result<impl Stream<Item = Result<T>>>
         where
-            T: DeserializeOwned + Unpin,
+            T: DeserializeOwned,
         {
             let url = format!("{}{}/query-stream", self.url_prefix(), self.root_url);
             let payload = json!({

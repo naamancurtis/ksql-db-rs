@@ -161,7 +161,7 @@ impl KsqlDB {
         stream_properties: HashMap<String, String>,
     ) -> Result<impl Stream<Item = Result<T>>>
     where
-        T: DeserializeOwned + Unpin,
+        T: DeserializeOwned,
     {
         self.query::<T>(query, stream_properties).await
     }
