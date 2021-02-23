@@ -24,12 +24,12 @@
 //!     let ksql = KsqlDB::new("localhost:8080".into(), Client::builder(), false).unwrap();
 //!
 //!     let statement = r#"SHOW STREAMS EXTENDED;"#;
-//!     let response = ksql.list_streams(&statement, Default::default(), None).await.unwrap();
+//!     let response = ksql.list_streams(&statement, &Default::default(), None).await.unwrap();
 //!     println!("{:#?}", response);
 //!
 //!     let query = r#"SELECT * FROM MY_STREAM EMIT CHANGES;"#;
 //!
-//!     let mut stream = ksql.select::<MyResponse>(&query, Default::default()).await.unwrap();
+//!     let mut stream = ksql.select::<MyResponse>(&query, &Default::default()).await.unwrap();
 //!
 //!     while let Some(data) = stream.next().await {
 //!         println!("{:#?}", data);

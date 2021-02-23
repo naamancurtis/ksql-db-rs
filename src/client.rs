@@ -46,13 +46,13 @@ impl KsqlDB {
     /// );
     /// "#;
     ///
-    /// let response = ksql.create(&query, Default::default(), None).await;
+    /// let response = ksql.create(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn create(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<CreateResponse>> {
         self.execute_statement::<CreateResponse>(
@@ -77,13 +77,13 @@ impl KsqlDB {
     ///
     /// let query = r#"DROP TABLE MY_TABLE;"#;
     ///
-    /// let response = ksql.drop(&query, Default::default(), None).await;
+    /// let response = ksql.drop(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn drop(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<DropResponse>> {
         self.execute_statement::<DropResponse>(
@@ -108,13 +108,13 @@ impl KsqlDB {
     ///
     /// let query = r#"TERMINATE my_query_id;"#;
     ///
-    /// let response = ksql.terminate(&query, Default::default(), None).await;
+    /// let response = ksql.terminate(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn terminate(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<TerminateResponse>> {
         self.execute_statement::<TerminateResponse>(
@@ -147,7 +147,7 @@ impl KsqlDB {
     ///
     /// let query = r#"SELECT * FROM MY_STREAM EMIT CHANGES;"#;
     ///
-    /// let mut stream = ksql.select::<MyResponse>(&query, Default::default()).await.unwrap();
+    /// let mut stream = ksql.select::<MyResponse>(&query, &Default::default()).await.unwrap();
     ///
     /// while let Some(data) = stream.next().await {
     ///     println!("{:#?}", data);
@@ -158,7 +158,7 @@ impl KsqlDB {
     pub async fn select<T>(
         &self,
         query: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
     ) -> Result<impl Stream<Item = Result<T>>>
     where
         T: DeserializeOwned,
@@ -181,13 +181,13 @@ impl KsqlDB {
     ///
     /// let query = r#"SHOW STREAMS;"#;
     ///
-    /// let response = ksql.list_streams(&query, Default::default(), None).await;
+    /// let response = ksql.list_streams(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn list_streams(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<ListStreamsResponse>> {
         self.execute_statement::<ListStreamsResponse>(
@@ -213,13 +213,13 @@ impl KsqlDB {
     ///
     /// let query = r#"SHOW TABLES EXTENDED;"#;
     ///
-    /// let response = ksql.list_tables(&query, Default::default(), None).await;
+    /// let response = ksql.list_tables(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn list_tables(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<ListTablesResponse>> {
         self.execute_statement::<ListTablesResponse>(
@@ -245,13 +245,13 @@ impl KsqlDB {
     ///
     /// let query = r#"SHOW QUERIES;"#;
     ///
-    /// let response = ksql.list_queries(&query, Default::default(), None).await;
+    /// let response = ksql.list_queries(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn list_queries(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<ListQueriesResponse>> {
         self.execute_statement::<ListQueriesResponse>(
@@ -276,13 +276,13 @@ impl KsqlDB {
     ///
     /// let query = r#"SHOW PROPERTIES;"#;
     ///
-    /// let response = ksql.list_properties(&query, Default::default(), None).await;
+    /// let response = ksql.list_properties(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn list_properties(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<Properties>> {
         self.execute_statement::<Properties>(statement, stream_properties, command_sequence_number)
@@ -303,13 +303,13 @@ impl KsqlDB {
     ///
     /// let query = r#"DESCRIBE EXTENDED MY_STREAM;"#;
     ///
-    /// let response = ksql.describe(&query, Default::default(), None).await;
+    /// let response = ksql.describe(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn describe(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<DescribeResponse>> {
         self.execute_statement::<DescribeResponse>(
@@ -334,13 +334,13 @@ impl KsqlDB {
     ///
     /// let query = r#"EXPLAIN my_query_id;"#;
     ///
-    /// let response = ksql.explain(&query, Default::default(), None).await;
+    /// let response = ksql.explain(&query, &Default::default(), None).await;
     /// # }
     /// ```
     pub async fn explain(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<ExplainResponse>> {
         self.execute_statement::<ExplainResponse>(
@@ -420,7 +420,7 @@ impl KsqlDB {
     ///
     ///     let query = "show streams;";
     ///     let result = ksql
-    ///         .execute_statement::<StatementResponse>(&query, Default::default(), None)
+    ///         .execute_statement::<StatementResponse>(&query, &Default::default(), None)
     ///         .await;
     /// }
     /// ```
@@ -429,7 +429,7 @@ impl KsqlDB {
     pub async fn execute_statement<T>(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<Vec<T>>
     where
@@ -473,7 +473,7 @@ impl KsqlDB {
     pub async fn execute_statement_raw(
         &self,
         statement: &str,
-        stream_properties: HashMap<String, String>,
+        stream_properties: &HashMap<String, String>,
         command_sequence_number: Option<u32>,
     ) -> Result<serde_json::Value> {
         let url = format!("{}{}/ksql", self.url_prefix(), self.root_url);

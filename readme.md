@@ -1,10 +1,10 @@
 <div align="center">
   <h1>Rust KSQL DB</h1>
 
-  [![crates.io](https://img.shields.io/crates/v/ksqldb?label=latest)](https://crates.io/crates/ksqldb)
-  [![docs](https://docs.rs/ksqldb/badge.svg)](https://docs.rs/ksqldb/latest/ksqldb)
-  [![repo](https://img.shields.io/badge/github-code-black)](https://github.com/naamancurtis/ksql-db-rs)
-  [![Apache-2.0](https://img.shields.io/github/license/naamancurtis/ksql-db-rs)](https://github.com/naamancurtis/ksql-db-rs/blob/main/LICENSE)
+[![crates.io](https://img.shields.io/crates/v/ksqldb?label=latest)](https://crates.io/crates/ksqldb)
+[![docs](https://docs.rs/ksqldb/badge.svg)](https://docs.rs/ksqldb/latest/ksqldb)
+[![repo](https://img.shields.io/badge/github-code-black)](https://github.com/naamancurtis/ksql-db-rs)
+[![Apache-2.0](https://img.shields.io/github/license/naamancurtis/ksql-db-rs)](https://github.com/naamancurtis/ksql-db-rs/blob/main/LICENSE)
 
 </div>
 
@@ -57,12 +57,12 @@ async fn main() {
     let ksql = KsqlDB::new("localhost:8080".into(), Client::builder(), false).unwrap();
 
     let statement = r#"SHOW STREAMS EXTENDED;"#;
-    let response = ksql.list_streams(&statement, Default::default(), None).await.unwrap();
+    let response = ksql.list_streams(&statement, &Default::default(), None).await.unwrap();
     println!("{:#?}", response);
 
     let query = r#"SELECT * FROM MY_STREAM EMIT CHANGES;"#;
 
-    let mut stream = ksql.select::<MyResponse>(&query, Default::default()).await.unwrap();
+    let mut stream = ksql.select::<MyResponse>(&query, &Default::default()).await.unwrap();
 
     while let Some(data) = stream.next().await {
         println!("{:#?}", data);

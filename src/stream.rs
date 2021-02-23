@@ -91,7 +91,7 @@ mod http2 {
         ///     let query = "SELECT * FROM EVENT_REPLAY_STREAM EMIT CHANGES;";
         ///
         ///     let mut stream = ksql
-        ///         .query::<Response>(&query, Default::default())
+        ///         .query::<Response>(&query, &Default::default())
         ///         .await
         ///         .unwrap();
         ///     while let Some(r) = stream.next().await {
@@ -111,7 +111,7 @@ mod http2 {
         pub async fn query<T>(
             &self,
             statement: &str,
-            properties: HashMap<String, String>,
+            properties: &HashMap<String, String>,
         ) -> Result<impl Stream<Item = Result<T>>>
         where
             T: DeserializeOwned,
@@ -316,7 +316,7 @@ mod http1 {
         ///     let query = "SELECT * FROM EVENT_REPLAY_STREAM EMIT CHANGES;";
         ///
         ///     let mut stream = ksql
-        ///         .query::<Response>(&query, Default::default())
+        ///         .query::<Response>(&query, &Default::default())
         ///         .await
         ///         .unwrap();
         ///     while let Some(r) = stream.next().await {
@@ -336,7 +336,7 @@ mod http1 {
         pub async fn query<T>(
             &self,
             query: &str,
-            stream_properties: HashMap<String, String>,
+            stream_properties: &HashMap<String, String>,
         ) -> Result<impl Stream<Item = Result<T>>>
         where
             T: DeserializeOwned,
