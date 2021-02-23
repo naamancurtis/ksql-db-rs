@@ -46,3 +46,11 @@ pub use error::Error;
 
 /// The result type for this library
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(all(feature = "http2", feature = "http1"))]
+compile_error!(
+    r#"
+    features `ksqldb/http2` and `ksqldb/http1` are mutually exclusive.
+    If you are trying to disable http2 set `default-features = false`.
+"#
+);
