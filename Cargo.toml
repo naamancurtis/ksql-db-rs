@@ -1,6 +1,6 @@
 [package]
 name = "ksqldb"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 authors = ["Naaman <naaman.the.dev@gmail.com>"]
 description = "A thin wrapper around the KSQL DB REST API to make it more ergonomic to work with."
 edition = "2018"

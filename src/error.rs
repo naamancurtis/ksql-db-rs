@@ -1,3 +1,4 @@
+//! Crate specific error types
 use serde::Deserialize;
 use serde_json::Value;
 

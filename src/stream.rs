@@ -61,7 +61,7 @@ mod http2 {
         ///
         /// ## Notes
         ///
-        /// - The `T` provided, must be able to directly [`Deserialize`] the response, it will
+        /// - The `T` provided, must be able to directly [`serde::Deserialize`] the response, it will
         /// error if there are missing mandatory fields
         /// - In the example below, if you were to change the query to be `SELECT ID FROM
         /// EVENT_REPLAY_STREAM EMIT CHANGES`, the query would error, because all of the other fields
@@ -165,7 +165,7 @@ mod http2 {
             columns: Vec<String>,
             #[pin]
             stream: S,
-            _marker: PhantomData<*const T>,
+            _marker: PhantomData<dyn Fn() -> T>,
         }
     }
 
@@ -391,7 +391,7 @@ mod http1 {
             columns: Vec<String>,
             #[pin]
             stream: S,
-            _marker: PhantomData<*const T>
+            _marker: PhantomData<dyn Fn() -> T>
         }
     }
 
