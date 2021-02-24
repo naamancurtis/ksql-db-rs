@@ -165,7 +165,7 @@ mod http2 {
             columns: Vec<String>,
             #[pin]
             stream: S,
-            _marker: PhantomData<dyn Fn() -> T>,
+            _marker: PhantomData<T>,
         }
     }
 
@@ -391,7 +391,7 @@ mod http1 {
             columns: Vec<String>,
             #[pin]
             stream: S,
-            _marker: PhantomData<dyn Fn() -> T>
+            _marker: PhantomData<T>
         }
     }
 
