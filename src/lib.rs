@@ -37,7 +37,7 @@
 //! }
 //! ```
 mod client;
-mod error;
+pub mod error;
 pub(crate) mod stream;
 pub mod types;
 
