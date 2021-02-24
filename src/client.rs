@@ -7,9 +7,10 @@ use serde_json::json;
 
 use std::collections::HashMap;
 
+use super::error::KsqlDBError;
 use super::types::{
-    CreateResponse, DescribeResponse, DropResponse, ExplainResponse, KsqlDBError,
-    ListQueriesResponse, ListStreamsResponse, ListTablesResponse, Properties, TerminateResponse,
+    CreateResponse, DescribeResponse, DropResponse, ExplainResponse, ListQueriesResponse,
+    ListStreamsResponse, ListTablesResponse, Properties, TerminateResponse,
 };
 use super::{Error, Result};
 

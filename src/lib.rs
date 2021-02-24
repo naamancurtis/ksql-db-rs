@@ -42,7 +42,7 @@ pub(crate) mod stream;
 pub mod types;
 
 pub use client::KsqlDB;
-pub use error::Error;
+pub use error::{Error, KsqlDBError};
 
 /// The result type for this library
 pub type Result<T> = std::result::Result<T, Error>;
