@@ -16,10 +16,12 @@ include = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["http2"]
+default = ["http2", "native_tls"]
 http2 = ["pin-project-lite"]
 http1 = ["regex", "pin-project-lite", "lazy_static"]
 trace = ["tracing", "tracing-futures"]
+native_tls = ["reqwest/native-tls"]
+rustls_tls = ["reqwest/rustls-tls"]
 
 [dependencies]
 serde = { version = "^1.0", features = ["derive"] }
@@ -30,7 +32,7 @@ bytes = "^1.0"
 futures-core = "^0.3"
 futures-util = "^0.3"
 
-reqwest = { version = "^0.11", features = ["json", "stream"] }
+reqwest = { version = "0.12", features = ["json", "stream"], default-features = false }
 
 pin-project-lite = { version = "0.2.4", optional = true } 
 regex = { version = "1.4.3", optional = true }

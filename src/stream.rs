@@ -37,7 +37,6 @@ mod http2 {
         pub fn new(url: String, mut builder: ClientBuilder, https_only: bool) -> Result<Self> {
             builder = builder
                 .user_agent(USER_AGENT)
-                .http2_prior_knowledge()
                 .https_only(https_only);
 
             Ok(Self {
