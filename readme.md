@@ -8,6 +8,8 @@
 
 </div>
 
+No longer actively maintained - please feel free to fork.
+
 This crate is a thin wrapper around the [KSQL-DB](https://ksqldb.io/) REST API
 to make interacting with the API more ergonomic for Rust projects. Under the
 hood it uses [reqwest](https://docs.rs/reqwest/latest) as a HTTP client to
